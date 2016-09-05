@@ -85,7 +85,7 @@ void IntHandlerExternalInterruptInstance0(void)
     by the interrupt.  xHandlingTask is the task's handle, which was obtained
     when the task was created. */
     vTaskNotifyGiveFromISR( pxTaskNavPredictionHandle, &xHigherPriorityTaskWoken );
-    
+     
     //BSP_LEDToggle(YELLOW);
     
     portEND_SWITCHING_ISR(xHigherPriorityTaskWoken);  
