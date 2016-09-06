@@ -92,7 +92,25 @@ void IntHandlerExternalInterruptInstance0(void)
 }
 void IntHandlerExternalInterruptInstance1(void)
 {
+    // nRF24L01+ interrupt request
+    BaseType_t xHigherPriorityTaskWoken;
+    
     PLIB_INT_SourceFlagClear(INT_ID_0, INT_SOURCE_EXTERNAL_2);
+    
+    
+    
+    /* xHigherPriorityTaskWoken must be initialised to pdFALSE.  If calling
+    vTaskNotifyGiveFromISR() unblocks the handling task, and the priority of
+    the handling task is higher than the priority of the currently running task,
+    then xHigherPriorityTaskWoken will automatically get set to pdTRUE. */
+    xHigherPriorityTaskWoken = pdFALSE;
+    
+    /* Unblock the handling task so the task can perform any processing necessitated
+    by the interrupt.  xHandlingTask is the task's handle, which was obtained
+    when the task was created. */
+    vTaskNotifyGiveFromISR( px_APP_TasksHandle, &xHigherPriorityTaskWoken );
+    
+    portEND_SWITCHING_ISR(xHigherPriorityTaskWoken);     
 }
 void IntHandlerDrvUsartInstance0(void)
 {

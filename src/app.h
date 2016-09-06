@@ -106,7 +106,7 @@ SUBSTITUTE GOODS, TECHNOLOGY, SERVICES, OR ANY CLAIMS BY THIRD PARTIES
 #define R_RX_PL_WID  0b01100000
 #define W_ACK_PAYLOAD   0b10101000
 #define W_TX_PAYLOAD_NOACK 0b10110000
-#define NOP          0b11111111
+#define NRF_NOP_CMD          0b11111111
 
 // Other constans
 #define AIR_NODE_ADDR   0xE5
@@ -149,6 +149,7 @@ typedef enum
 	/* Application's state machine's initial state. */
 	APP_STATE_INIT=0,
 	APP_STATE_SERVICE_TASKS,
+    APP_PROCESS_CMD,
 
 	/* TODO: Define states used by the application state machine. */
 
@@ -174,6 +175,7 @@ typedef struct
     APP_STATES state;
     uint8_t nRF_status; // Indicate if it is busy
     uint8_t data;       // Place holder for nRF24L01+ status register
+    uint8_t cmd;
     
 
     /* TODO: Define any additional data used by the application. */

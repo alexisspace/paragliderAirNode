@@ -76,7 +76,7 @@ SUBSTITUTE GOODS, TECHNOLOGY, SERVICES, OR ANY CLAIMS BY THIRD PARTIES
     Application strings and buffers are be defined outside this structure.
 */
 
-volatile APP_DATA appData;
+volatile APP_DATA appData = {0, 0, 0, 0};
 
 DRV_SPI_CLIENT_DATA SPI_cfgObj={
  .baudRate = 0,
@@ -102,17 +102,22 @@ void  APP_SPI_BufferEventHandler(DRV_SPI_BUFFER_EVENT event, DRV_SPI_BUFFER_HAND
 	switch(event)
 	{
 		case DRV_SPI_BUFFER_EVENT_PROCESSING:
-		// Assert SS line (0)
-        PLIB_PORTS_PinWrite(PORTS_ID_0, PORT_CHANNEL_G, PORTS_BIT_POS_14, 0);
-        BSP_LEDToggle(YELLOW);  // This is to verify callback is executed at beginning
-        appData.nRF_status = 1; // Set busy status
+            // Assert SS line (0)
+            PLIB_PORTS_PinWrite(PORTS_ID_0, PORT_CHANNEL_G, PORTS_BIT_POS_14, 0);
+            BSP_LEDToggle(YELLOW);  // This is to verify callback is executed at beginning
+            appData.nRF_status = 1; // Set busy status
 		break;
+        
 		case DRV_SPI_BUFFER_EVENT_COMPLETE:
-		// Release SS line (1)
-        PLIB_PORTS_PinWrite(PORTS_ID_0, PORT_CHANNEL_G, PORTS_BIT_POS_14, 1);
-        BSP_LEDToggle(GREEN);
-        appData.nRF_status = 0; // Set idle status
+            // Release SS line (1)
+            PLIB_PORTS_PinWrite(PORTS_ID_0, PORT_CHANNEL_G, PORTS_BIT_POS_14, 1);
+            BSP_LEDToggle(GREEN);
+            appData.nRF_status = 0; // Set idle status
+
+            // Update status register value
+            appData.data = SPI_ReadBuffer[0];
 		break;
+        
 		case DRV_SPI_BUFFER_EVENT_ERROR:
 		break;
 	}
@@ -242,6 +247,7 @@ void APP_Initialize ( void )
 
 void APP_Tasks ( void )
 {
+    unsigned char n, n_payload;
 
     /* Check the application's current state. */
     switch ( appData.state )
@@ -263,13 +269,109 @@ void APP_Tasks ( void )
         case APP_STATE_SERVICE_TASKS:
         {
             // Use the task inherent semaphore 1 
-            break;
-        }
+            // Wait for INT2 external interrupt, nRF24L01+ interrupt request.
+            ulTaskNotifyTake( pdTRUE, portMAX_DELAY ); /* Block indefinitely. */
 
-        /* TODO: implement your application state machine.*/
+            while(appData.nRF_status);  // Wait for SPI driver to be idle
+            SPI_WriteBuffer[0] = NRF_NOP_CMD;   // Read the STATUS register
+            DRV_SPI_BufferAddWriteRead2(SPI_handle, SPI_WriteBuffer, 1, SPI_ReadBuffer, 1,
+                    APP_SPI_BufferEventHandler, NULL, SPI_bufferHandle);
+
+            while(appData.nRF_status);  // Wait for SPI driver to be idle
+            // Guardar el registro STATUS para verificar la fuente de interrupcion
+            n = appData.data>>4; // Take the relevant bits only
+
+            // Data ready RX FIFO. Asserted when new data arrives RX FIFO   
+            if(n & 0x04){
+                //The RX_DR IRQ is asserted by a new packet arrival event. 
+                //The procedure for handling this interrupt should be: 
+                //1) read payload through SPI, 
+                // Read payload width
+                while(appData.nRF_status); // Wait for SPI to be idle
+                SPI_WriteBuffer[0] = R_RX_PL_WID;   // 
+                DRV_SPI_BufferAddWriteRead2(SPI_handle, SPI_WriteBuffer, 1, SPI_ReadBuffer, 2,
+                    APP_SPI_BufferEventHandler, NULL, SPI_bufferHandle);
+
+                // Read actual payload data
+                while(appData.nRF_status); // Wait for SPI to be idle
+                n_payload = SPI_WriteBuffer[1]; // Save payload width      
+                if(n_payload < 32){ // Check if it is a valid payload length, otherwise there is an error
+                    SPI_WriteBuffer[0] = R_RX_PAYLOAD;
+                    DRV_SPI_BufferAddWriteRead2(SPI_handle, SPI_WriteBuffer, 1, SPI_ReadBuffer, n_payload+1,
+                        APP_SPI_BufferEventHandler, NULL, SPI_bufferHandle);                
+
+                    // Process command (maybe in the next app.state)
+                    appData.cmd = SPI_ReadBuffer[1];
+                    appData.state = APP_PROCESS_CMD;
+
+                }else{
+                   // Flush RX FIFO on nRF24L01+
+                   SPI_WriteBuffer[0] = FLUSH_RX;
+                   DRV_SPI_BufferAddWriteRead2(SPI_handle, SPI_WriteBuffer, 1, SPI_ReadBuffer, 1,
+                        APP_SPI_BufferEventHandler, NULL, SPI_bufferHandle);
+                }
+                //2) clear RX_DR IRQ,
+                while(appData.nRF_status);  // Wait for SPI to be idle
+                SPI_WriteBuffer[0] = W_REGISTER | STATUS_REG;
+                SPI_WriteBuffer[1] = 0x40;       // Write STATUS_REG to clear interrupt sources
+                   DRV_SPI_BufferAddWriteRead2(SPI_handle, SPI_WriteBuffer, 2, SPI_ReadBuffer, 1,
+                        APP_SPI_BufferEventHandler, NULL, SPI_bufferHandle);
+
+                //3) read FIFO_STATUS to check if there are more payloads available in RX FIFO, 
+                while(appData.nRF_status); // Wait for SPI to be idle
+                SPI_WriteBuffer[0] = R_REGISTER | FIFO_STATUS;
+                DRV_SPI_BufferAddWriteRead2(SPI_handle, SPI_WriteBuffer, 1, SPI_ReadBuffer, 2,
+                    APP_SPI_BufferEventHandler, NULL, SPI_bufferHandle);
+                while(appData.nRF_status); // Wait for SPI to be idle
+                if(SPI_ReadBuffer[1] & 0x01){
+                    // RX FIFO empty
+                }    
+                //4) if there are more data in RX FIFO, repeat from step 1).            
+            }
+
+            // Data Sent TX FIFO interrupt. Asserted when packet transmitted on TX.
+            if(n & 0x02){
+                while(appData.nRF_status);  // Wait for SPI to be idle
+                SPI_WriteBuffer[0] = W_REGISTER | STATUS_REG;
+                SPI_WriteBuffer[1] = 0x20;       // Write STATUS_REG to clear interrupt sources
+                DRV_SPI_BufferAddWriteRead2(SPI_handle, SPI_WriteBuffer, 2, SPI_ReadBuffer, 1,
+                        APP_SPI_BufferEventHandler, NULL, SPI_bufferHandle);            
+            }
+            // Maximum number of TX retransmits interrupt
+            if(n & 0x01){
+                while(appData.nRF_status);  // Wait for SPI to be idle
+                SPI_WriteBuffer[0] = W_REGISTER | STATUS_REG;
+                SPI_WriteBuffer[1] = 0x10;       // Write STATUS_REG to clear interrupt sources
+                DRV_SPI_BufferAddWriteRead2(SPI_handle, SPI_WriteBuffer, 2, SPI_ReadBuffer, 1,
+                        APP_SPI_BufferEventHandler, NULL, SPI_bufferHandle);              
+            }
+            // 
+            
+                break;
+        }
         
+        case APP_PROCESS_CMD:
+        {
+        /* TODO: implement your application state machine.*/
+            switch(appData.cmd)
+            {
+                case GET_GPS_DATA:
+                {   
+                    // Send GPS data to earth node
+                    while(appData.nRF_status);  // Wait for SPI to be idle
+                    SPI_WriteBuffer[0] = W_TX_PAYLOAD;
+                    n_payload = sprintf(&SPI_WriteBuffer[1],"LatLon\n"); // Example string
+                    DRV_SPI_BufferAddWriteRead2(SPI_handle, SPI_WriteBuffer, n_payload+2, SPI_ReadBuffer, 1,
+                            APP_SPI_BufferEventHandler, NULL, SPI_bufferHandle);                    
+                    appData.cmd = 0; // Can be replaced with an enum type
+                    break;
+                }
+            }
 
         /* The default state should never be executed. */
+    
+            break;
+        }
         default:
         {
             /* TODO: Handle error in application's state machine. */
