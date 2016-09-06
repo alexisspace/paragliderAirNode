@@ -138,49 +138,49 @@ void nRF24L01p_PowerUp(void)
     SPI_WriteBuffer[0] = W_REGISTER | SETUP_RETR;
     SPI_WriteBuffer[1] = 0b00010011;
     DRV_SPI_BufferAddWriteRead2(SPI_handle, SPI_WriteBuffer, 2, SPI_ReadBuffer, 1,
-            APP_SPI_BufferEventHandler, NULL, SPI_bufferHandle);
+            APP_SPI_BufferEventHandler, NULL, &SPI_bufferHandle);
     
     // TX_ADDR: Only LSB writen
     while(appData.nRF_status);  // Wait for SPI driver to be idle
     SPI_WriteBuffer[0] = W_REGISTER | TX_ADDR;
     SPI_WriteBuffer[1] = EARTH_NODE_ADDR;
     DRV_SPI_BufferAddWriteRead2(SPI_handle, SPI_WriteBuffer, 2, SPI_ReadBuffer, 1,
-            APP_SPI_BufferEventHandler, NULL, SPI_bufferHandle);    
+            APP_SPI_BufferEventHandler, NULL, &SPI_bufferHandle);    
 
     // RX_ADDR_P0: This should be the same TX_ADDR to in order for the AKC packet to be received
     while(appData.nRF_status);  // Wait for SPI driver to be idle
     SPI_WriteBuffer[0] = W_REGISTER | RX_ADDR_P0;
     SPI_WriteBuffer[1] = EARTH_NODE_ADDR;
     DRV_SPI_BufferAddWriteRead2(SPI_handle, SPI_WriteBuffer, 2, SPI_ReadBuffer, 1,
-            APP_SPI_BufferEventHandler, NULL, SPI_bufferHandle);     
+            APP_SPI_BufferEventHandler, NULL, &SPI_bufferHandle);     
     
     // RX_ADDR_P1: This is the address the earth node will be sending to.
     while(appData.nRF_status);  // Wait for SPI driver to be idle
     SPI_WriteBuffer[0] = W_REGISTER | RX_ADDR_P1;
     SPI_WriteBuffer[1] = AIR_NODE_ADDR;
     DRV_SPI_BufferAddWriteRead2(SPI_handle, SPI_WriteBuffer, 2, SPI_ReadBuffer, 1,
-            APP_SPI_BufferEventHandler, NULL, SPI_bufferHandle);   
+            APP_SPI_BufferEventHandler, NULL, &SPI_bufferHandle);   
     
     // DYNPD: Enable dynamic payloads on P0 and P1
     while(appData.nRF_status);  // Wait for SPI driver to be idle
     SPI_WriteBuffer[0] = W_REGISTER | DYNPD;
     SPI_WriteBuffer[1] = 0x03;
     DRV_SPI_BufferAddWriteRead2(SPI_handle, SPI_WriteBuffer, 2, SPI_ReadBuffer, 1,
-            APP_SPI_BufferEventHandler, NULL, SPI_bufferHandle);     
+            APP_SPI_BufferEventHandler, NULL, &SPI_bufferHandle);     
     
     // FEATURE: 
     while(appData.nRF_status);  // Wait for SPI driver to be idle
     SPI_WriteBuffer[0] = W_REGISTER | FEATURE;
     SPI_WriteBuffer[1] = 0b00000111;
     DRV_SPI_BufferAddWriteRead2(SPI_handle, SPI_WriteBuffer, 2, SPI_ReadBuffer, 1,
-            APP_SPI_BufferEventHandler, NULL, SPI_bufferHandle);
+            APP_SPI_BufferEventHandler, NULL, &SPI_bufferHandle);
     
     // CONFIG: Power up
     while(appData.nRF_status);  // Wait for SPI driver to be idle
     SPI_WriteBuffer[0] = W_REGISTER | CONFIG;
     SPI_WriteBuffer[1] = 0b00001010;
     DRV_SPI_BufferAddWriteRead2(SPI_handle, SPI_WriteBuffer, 2, SPI_ReadBuffer, 1,
-            APP_SPI_BufferEventHandler, NULL, SPI_bufferHandle);
+            APP_SPI_BufferEventHandler, NULL, &SPI_bufferHandle);
 }
 
 
@@ -191,7 +191,7 @@ void nRF24L01p_PTX_config(void)
     SPI_WriteBuffer[0] = W_REGISTER | CONFIG;
     SPI_WriteBuffer[1] = 0b00001010;
     DRV_SPI_BufferAddWriteRead2(SPI_handle, SPI_WriteBuffer, 2, SPI_ReadBuffer, 1,
-            APP_SPI_BufferEventHandler, NULL, SPI_bufferHandle);
+            APP_SPI_BufferEventHandler, NULL, &SPI_bufferHandle);
 }
 void nRF24L01p_PRX_config(void)
 {
@@ -200,7 +200,7 @@ void nRF24L01p_PRX_config(void)
     SPI_WriteBuffer[0] = W_REGISTER | CONFIG;
     SPI_WriteBuffer[1] = 0b00001011;
     DRV_SPI_BufferAddWriteRead2(SPI_handle, SPI_WriteBuffer, 2, SPI_ReadBuffer, 1,
-            APP_SPI_BufferEventHandler, NULL, SPI_bufferHandle);
+            APP_SPI_BufferEventHandler, NULL, &SPI_bufferHandle);
 }
 // *****************************************************************************
 // *****************************************************************************
@@ -275,7 +275,7 @@ void APP_Tasks ( void )
             while(appData.nRF_status);  // Wait for SPI driver to be idle
             SPI_WriteBuffer[0] = NRF_NOP_CMD;   // Read the STATUS register
             DRV_SPI_BufferAddWriteRead2(SPI_handle, SPI_WriteBuffer, 1, SPI_ReadBuffer, 1,
-                    APP_SPI_BufferEventHandler, NULL, SPI_bufferHandle);
+                    APP_SPI_BufferEventHandler, NULL, &SPI_bufferHandle);
 
             while(appData.nRF_status);  // Wait for SPI driver to be idle
             // Guardar el registro STATUS para verificar la fuente de interrupcion
@@ -290,7 +290,7 @@ void APP_Tasks ( void )
                 while(appData.nRF_status); // Wait for SPI to be idle
                 SPI_WriteBuffer[0] = R_RX_PL_WID;   // 
                 DRV_SPI_BufferAddWriteRead2(SPI_handle, SPI_WriteBuffer, 1, SPI_ReadBuffer, 2,
-                    APP_SPI_BufferEventHandler, NULL, SPI_bufferHandle);
+                    APP_SPI_BufferEventHandler, NULL, &SPI_bufferHandle);
 
                 // Read actual payload data
                 while(appData.nRF_status); // Wait for SPI to be idle
@@ -298,7 +298,7 @@ void APP_Tasks ( void )
                 if(n_payload < 32){ // Check if it is a valid payload length, otherwise there is an error
                     SPI_WriteBuffer[0] = R_RX_PAYLOAD;
                     DRV_SPI_BufferAddWriteRead2(SPI_handle, SPI_WriteBuffer, 1, SPI_ReadBuffer, n_payload+1,
-                        APP_SPI_BufferEventHandler, NULL, SPI_bufferHandle);                
+                        APP_SPI_BufferEventHandler, NULL, &SPI_bufferHandle);                
 
                     // Process command (maybe in the next app.state)
                     appData.cmd = SPI_ReadBuffer[1];
@@ -308,20 +308,20 @@ void APP_Tasks ( void )
                    // Flush RX FIFO on nRF24L01+
                    SPI_WriteBuffer[0] = FLUSH_RX;
                    DRV_SPI_BufferAddWriteRead2(SPI_handle, SPI_WriteBuffer, 1, SPI_ReadBuffer, 1,
-                        APP_SPI_BufferEventHandler, NULL, SPI_bufferHandle);
+                        APP_SPI_BufferEventHandler, NULL, &SPI_bufferHandle);
                 }
                 //2) clear RX_DR IRQ,
                 while(appData.nRF_status);  // Wait for SPI to be idle
                 SPI_WriteBuffer[0] = W_REGISTER | STATUS_REG;
                 SPI_WriteBuffer[1] = 0x40;       // Write STATUS_REG to clear interrupt sources
                    DRV_SPI_BufferAddWriteRead2(SPI_handle, SPI_WriteBuffer, 2, SPI_ReadBuffer, 1,
-                        APP_SPI_BufferEventHandler, NULL, SPI_bufferHandle);
+                        APP_SPI_BufferEventHandler, NULL, &SPI_bufferHandle);
 
                 //3) read FIFO_STATUS to check if there are more payloads available in RX FIFO, 
                 while(appData.nRF_status); // Wait for SPI to be idle
                 SPI_WriteBuffer[0] = R_REGISTER | FIFO_STATUS;
                 DRV_SPI_BufferAddWriteRead2(SPI_handle, SPI_WriteBuffer, 1, SPI_ReadBuffer, 2,
-                    APP_SPI_BufferEventHandler, NULL, SPI_bufferHandle);
+                    APP_SPI_BufferEventHandler, NULL, &SPI_bufferHandle);
                 while(appData.nRF_status); // Wait for SPI to be idle
                 if(SPI_ReadBuffer[1] & 0x01){
                     // RX FIFO empty
@@ -335,7 +335,7 @@ void APP_Tasks ( void )
                 SPI_WriteBuffer[0] = W_REGISTER | STATUS_REG;
                 SPI_WriteBuffer[1] = 0x20;       // Write STATUS_REG to clear interrupt sources
                 DRV_SPI_BufferAddWriteRead2(SPI_handle, SPI_WriteBuffer, 2, SPI_ReadBuffer, 1,
-                        APP_SPI_BufferEventHandler, NULL, SPI_bufferHandle);            
+                        APP_SPI_BufferEventHandler, NULL, &SPI_bufferHandle);            
             }
             // Maximum number of TX retransmits interrupt
             if(n & 0x01){
@@ -343,7 +343,7 @@ void APP_Tasks ( void )
                 SPI_WriteBuffer[0] = W_REGISTER | STATUS_REG;
                 SPI_WriteBuffer[1] = 0x10;       // Write STATUS_REG to clear interrupt sources
                 DRV_SPI_BufferAddWriteRead2(SPI_handle, SPI_WriteBuffer, 2, SPI_ReadBuffer, 1,
-                        APP_SPI_BufferEventHandler, NULL, SPI_bufferHandle);              
+                        APP_SPI_BufferEventHandler, NULL, &SPI_bufferHandle);              
             }
             // 
             
@@ -362,7 +362,7 @@ void APP_Tasks ( void )
                     SPI_WriteBuffer[0] = W_TX_PAYLOAD;
                     n_payload = sprintf(&SPI_WriteBuffer[1],"LatLon\n"); // Example string
                     DRV_SPI_BufferAddWriteRead2(SPI_handle, SPI_WriteBuffer, n_payload+2, SPI_ReadBuffer, 1,
-                            APP_SPI_BufferEventHandler, NULL, SPI_bufferHandle);                    
+                            APP_SPI_BufferEventHandler, NULL, &SPI_bufferHandle);                    
                     appData.cmd = 0; // Can be replaced with an enum type
                     break;
                 }
