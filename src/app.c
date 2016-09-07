@@ -102,15 +102,15 @@ void  APP_SPI_BufferEventHandler(DRV_SPI_BUFFER_EVENT event, DRV_SPI_BUFFER_HAND
 	switch(event)
 	{
 		case DRV_SPI_BUFFER_EVENT_PROCESSING:
-            // Assert SS line (0)
-            PLIB_PORTS_PinWrite(PORTS_ID_0, PORT_CHANNEL_G, PORTS_BIT_POS_14, 0);
+            // Assert CSN line (0)
+            PLIB_PORTS_PinWrite(PORTS_ID_0, PORT_CHANNEL_G, CSN_PIN, 0);
             BSP_LEDToggle(YELLOW);  // This is to verify callback is executed at beginning
             appData.nRF_status = 1; // Set busy status
 		break;
         
 		case DRV_SPI_BUFFER_EVENT_COMPLETE:
-            // Release SS line (1)
-            PLIB_PORTS_PinWrite(PORTS_ID_0, PORT_CHANNEL_G, PORTS_BIT_POS_14, 1);
+            // Release CSN line (1)
+            PLIB_PORTS_PinWrite(PORTS_ID_0, PORT_CHANNEL_G, CSN_PIN, 1);
             BSP_LEDToggle(GREEN);
             appData.nRF_status = 0; // Set idle status
 
@@ -181,6 +181,9 @@ void nRF24L01p_PowerUp(void)
     SPI_WriteBuffer[1] = 0b00001010;
     DRV_SPI_BufferAddWriteRead2(SPI_handle, SPI_WriteBuffer, 2, SPI_ReadBuffer, 1,
             APP_SPI_BufferEventHandler, NULL, &SPI_bufferHandle);
+    
+    // CE PIN set LOW to enter standby-I MODE
+    PLIB_PORTS_PinWrite(PORTS_ID_0, PORT_CHANNEL_G, CE_PIN, 0);
 }
 
 
@@ -192,7 +195,10 @@ void nRF24L01p_PTX_config(void)
     SPI_WriteBuffer[1] = 0b00001010;
     DRV_SPI_BufferAddWriteRead2(SPI_handle, SPI_WriteBuffer, 2, SPI_ReadBuffer, 1,
             APP_SPI_BufferEventHandler, NULL, &SPI_bufferHandle);
+    // CE PIN set LOW to enter standby-I
+    PLIB_PORTS_PinWrite(PORTS_ID_0, PORT_CHANNEL_G, CE_PIN, 0);
 }
+
 void nRF24L01p_PRX_config(void)
 {
     // CONFIG: PRIM_RX bit set HIGH
@@ -201,6 +207,8 @@ void nRF24L01p_PRX_config(void)
     SPI_WriteBuffer[1] = 0b00001011;
     DRV_SPI_BufferAddWriteRead2(SPI_handle, SPI_WriteBuffer, 2, SPI_ReadBuffer, 1,
             APP_SPI_BufferEventHandler, NULL, &SPI_bufferHandle);
+    // CE PIN set HIGH to enter receive mode
+    PLIB_PORTS_PinWrite(PORTS_ID_0, PORT_CHANNEL_G, CE_PIN, 1);
 }
 // *****************************************************************************
 // *****************************************************************************
@@ -294,7 +302,7 @@ void APP_Tasks ( void )
 
                 // Read actual payload data
                 while(appData.nRF_status); // Wait for SPI to be idle
-                n_payload = SPI_WriteBuffer[1]; // Save payload width      
+                n_payload = SPI_ReadBuffer[1]; // Save payload width     
                 if(n_payload < 32){ // Check if it is a valid payload length, otherwise there is an error
                     SPI_WriteBuffer[0] = R_RX_PAYLOAD;
                     DRV_SPI_BufferAddWriteRead2(SPI_handle, SPI_WriteBuffer, 1, SPI_ReadBuffer, n_payload+1,
@@ -357,9 +365,9 @@ void APP_Tasks ( void )
             {
                 case GET_GPS_DATA:
                 {   
-                    // Send GPS data to earth node
+                    // Send GPS data to earth node. NOTE: It will be sent on the second request
                     while(appData.nRF_status);  // Wait for SPI to be idle
-                    SPI_WriteBuffer[0] = W_TX_PAYLOAD;
+                    SPI_WriteBuffer[0] = W_ACK_PAYLOAD | 0x01; // Pipe 0x01 ACK payload
                     n_payload = sprintf(&SPI_WriteBuffer[1],"LatLon\n"); // Example string
                     DRV_SPI_BufferAddWriteRead2(SPI_handle, SPI_WriteBuffer, n_payload+2, SPI_ReadBuffer, 1,
                             APP_SPI_BufferEventHandler, NULL, &SPI_bufferHandle);                    
