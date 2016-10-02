@@ -112,9 +112,9 @@ int32_t DRV_SPI_SetVTable(struct DRV_SPI_DRIVER_OBJECT * driverObject, const DRV
         return -1;
     }
 
-    if (pInit->bufferType == DRV_SPI_BUFFER_TYPE_ENHANCED)
+    if (pInit->bufferType == DRV_SPI_BUFFER_TYPE_STANDARD)
     {
-        mode |= _SPI_DRV_VTABLE_EBM;
+        mode |= _SPI_DRV_VTABLE_RM;
     }
     else
     {
@@ -133,8 +133,8 @@ int32_t DRV_SPI_SetVTable(struct DRV_SPI_DRIVER_OBJECT * driverObject, const DRV
     }
     switch (mode)
     {
-    case _SPI_DRV_VTABLE_I_M_E_8:
-        driverObject->vfMainTask = DRV_SPI_ISRMasterEBM8BitTasks;
+    case _SPI_DRV_VTABLE_I_M_R_8:
+        driverObject->vfMainTask = DRV_SPI_ISRMasterRM8BitTasks;
         break;
     default:
         SYS_ASSERT(false, "\r\nInvalid SPI Configuration.");
@@ -264,9 +264,10 @@ int32_t DRV_SPI_SetupHardware(struct DRV_SPI_DRIVER_OBJECT * driverObject, const
             return -1;
     }
 
-    PLIB_SPI_FIFOEnable( spiId  );
-    PLIB_SPI_FIFOInterruptModeSelect(spiId, SPI_FIFO_INTERRUPT_WHEN_TRANSMIT_BUFFER_IS_COMPLETELY_EMPTY);
-    PLIB_SPI_FIFOInterruptModeSelect(spiId, SPI_FIFO_INTERRUPT_WHEN_RECEIVE_BUFFER_IS_NOT_EMPTY);
+    if (PLIB_SPI_ExistsFIFOControl( spiId  ))
+    {
+        PLIB_SPI_FIFODisable( spiId  );
+    }
 
     PLIB_SPI_BufferClear( spiId );
     PLIB_SPI_ReceiverOverflowClear ( spiId );

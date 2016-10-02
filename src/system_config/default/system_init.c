@@ -68,9 +68,9 @@ SUBSTITUTE GOODS, TECHNOLOGY, SERVICES, OR ANY CLAIMS BY THIRD PARTIES
 /*** DEVCFG1 ***/
 
 #pragma config FNOSC =      PRIPLL
-#pragma config FSOSCEN =    ON
+#pragma config FSOSCEN =    OFF
 #pragma config IESO =       ON
-#pragma config POSCMOD =    XT
+#pragma config POSCMOD =    HS
 #pragma config OSCIOFNC =   OFF
 #pragma config FPBDIV =     DIV_1
 #pragma config FCKSM =      CSECMD
@@ -224,7 +224,7 @@ void SYS_Initialize ( void* data )
 
     /* Initialize System Services */
 
-    /*** Interrupt Service Initialization Code ***/  
+    /*** Interrupt Service Initialization Code ***/
     SYS_INT_Initialize();
 
     /*Setup the INT_SOURCE_EXTERNAL_1 and Enable it*/

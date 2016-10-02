@@ -323,7 +323,7 @@
       <Template>
         <Name>system_init.c</Name>
         <Path>Source Files/app/system_config/default</Path>
-        <Checksum>D498CC2CBAD2E618D7036E025980BFEA</Checksum>
+        <Checksum>F9B033880B2E1AF2953D2C00C6966645</Checksum>
       </Template>
       <Template>
         <Name>main.c</Name>
@@ -333,6 +333,11 @@
         <Name>system_interrupt_a.S</Name>
         <Path>Source Files/app/system_config/default</Path>
         <Checksum>ADBCB1A80A369F9A4670653D3220515D</Checksum>
+      </Template>
+      <Template>
+        <Name>drv_spi_master_rm_tasks.c</Name>
+        <Path>Source Files/app/system_config/default/framework/driver/spi/dynamic</Path>
+        <Checksum>F65FEAB721E68F2679A60E816B77D31E</Checksum>
       </Template>
       <Template>
         <Name>system_definitions.h</Name>
@@ -351,12 +356,12 @@
       <Template>
         <Name>drv_spi_tasks.c</Name>
         <Path>Source Files/app/system_config/default/framework/driver/spi/dynamic</Path>
-        <Checksum>0468A6AC4EF824897AA5C22F6EAFBB43</Checksum>
+        <Checksum>112C481490743844C144BA29F65BAF71</Checksum>
       </Template>
       <Template>
         <Name>FreeRTOSConfig.h</Name>
         <Path>Header Files/app/system_config/default</Path>
-        <Checksum>A1F6B14C1BF51E577014DBC1D4C92CF1</Checksum>
+        <Checksum>7EDCD1325D977A960C2ABFDDB859D910</Checksum>
       </Template>
       <Template>
         <Name>system_tasks.c</Name>
@@ -367,7 +372,7 @@
       <Template>
         <Name>system_config.h</Name>
         <Path>Header Files/app/system_config/default</Path>
-        <Checksum>001A0639192B9B02D6EEE60B829E8B33</Checksum>
+        <Checksum>29BF797092AC5F64C2A50C04C1430C2E</Checksum>
       </Template>
       <Template>
         <Name>app.h</Name>
@@ -390,11 +395,6 @@
         <Checksum>FA52743264536E5207D2ADBE57B48D05</Checksum>
       </Template>
       <Template>
-        <Name>drv_spi_master_ebm_tasks.c</Name>
-        <Path>Source Files/app/system_config/default/framework/driver/spi/dynamic</Path>
-        <Checksum>4C2C868738FD74E2D6A3C8A8FD6B1381</Checksum>
-      </Template>
-      <Template>
         <Name>sys_clk_static.c</Name>
         <Path>Source Files/app/system_config/default/framework/system/clk/src</Path>
         <Checksum>E8C935BED4628875A8C3428DDD07355C</Checksum>
@@ -402,7 +402,7 @@
       <Template>
         <Name>drv_spi_api.c</Name>
         <Path>Source Files/app/system_config/default/framework/driver/spi/dynamic</Path>
-        <Checksum>6803BAA6FC8105DD3200F5BF3A8E7577</Checksum>
+        <Checksum>D19BFE2F8B63530529A61BBD27205DC6</Checksum>
       </Template>
     </Templates>
     <CompilerItems>

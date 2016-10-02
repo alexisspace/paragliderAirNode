@@ -54,6 +54,7 @@ SUBSTITUTE GOODS, TECHNOLOGY, SERVICES, OR ANY CLAIMS BY THIRD PARTIES
 // *****************************************************************************
 
 #include "app.h"
+#include <stdio.h>
 
 // *****************************************************************************
 // *****************************************************************************
@@ -75,8 +76,15 @@ SUBSTITUTE GOODS, TECHNOLOGY, SERVICES, OR ANY CLAIMS BY THIRD PARTIES
     
     Application strings and buffers are be defined outside this structure.
 */
-
-volatile APP_DATA appData = {0, 0, 0, 0};
+/*
+APP_DATA appData = {
+    .state = APP_STATE_INIT,
+    .nRF_status = 0,
+    .data = 0,
+    .cmd = 0,
+};
+*/
+//APP_DATA appData;
 
 DRV_SPI_CLIENT_DATA SPI_cfgObj={
  .baudRate = 0,
@@ -87,6 +95,7 @@ DRV_SPI_CLIENT_DATA SPI_cfgObj={
 DRV_HANDLE  SPI_handle;
 char   SPI_ReadBuffer[SPI_READ_BUFFER_SIZE], SPI_WriteBuffer[SPI_WRITE_BUFFER_SIZE];
 DRV_SPI_BUFFER_HANDLE SPI_bufferHandle;
+volatile unsigned char spi_status;
 
 // *****************************************************************************
 // *****************************************************************************
@@ -104,18 +113,19 @@ void  APP_SPI_BufferEventHandler(DRV_SPI_BUFFER_EVENT event, DRV_SPI_BUFFER_HAND
 		case DRV_SPI_BUFFER_EVENT_PROCESSING:
             // Assert CSN line (0)
             PLIB_PORTS_PinWrite(PORTS_ID_0, PORT_CHANNEL_G, CSN_PIN, 0);
-            BSP_LEDToggle(YELLOW);  // This is to verify callback is executed at beginning
             appData.nRF_status = 1; // Set busy status
+            spi_status = 1;
+            //PLIB_PORTS_PinToggle(PORTS_ID_0, PORT_CHANNEL_D, PORTS_BIT_POS_1);
 		break;
         
 		case DRV_SPI_BUFFER_EVENT_COMPLETE:
             // Release CSN line (1)
             PLIB_PORTS_PinWrite(PORTS_ID_0, PORT_CHANNEL_G, CSN_PIN, 1);
-            BSP_LEDToggle(GREEN);
             appData.nRF_status = 0; // Set idle status
-
+            spi_status = 0;
             // Update status register value
             appData.data = SPI_ReadBuffer[0];
+            //PLIB_PORTS_PinToggle(PORTS_ID_0, PORT_CHANNEL_D, PORTS_BIT_POS_2);
 		break;
         
 		case DRV_SPI_BUFFER_EVENT_ERROR:
@@ -158,15 +168,12 @@ void nRF24L01p_PowerUp(void)
     while(appData.nRF_status);  // Wait for SPI driver to be idle
     SPI_WriteBuffer[0] = W_REGISTER | RX_ADDR_P1;
     SPI_WriteBuffer[1] = AIR_NODE_ADDR;
-    DRV_SPI_BufferAddWriteRead2(SPI_handle, SPI_WriteBuffer, 2, SPI_ReadBuffer, 1,
+    SPI_WriteBuffer[2] = 0xE7;
+    SPI_WriteBuffer[3] = 0xE7;
+    SPI_WriteBuffer[4] = 0xE7;
+    SPI_WriteBuffer[5] = 0xE7;
+    DRV_SPI_BufferAddWriteRead2(SPI_handle, SPI_WriteBuffer, 6, SPI_ReadBuffer, 1,
             APP_SPI_BufferEventHandler, NULL, &SPI_bufferHandle);   
-    
-    // DYNPD: Enable dynamic payloads on P0 and P1
-    while(appData.nRF_status);  // Wait for SPI driver to be idle
-    SPI_WriteBuffer[0] = W_REGISTER | DYNPD;
-    SPI_WriteBuffer[1] = 0x03;
-    DRV_SPI_BufferAddWriteRead2(SPI_handle, SPI_WriteBuffer, 2, SPI_ReadBuffer, 1,
-            APP_SPI_BufferEventHandler, NULL, &SPI_bufferHandle);     
     
     // FEATURE: 
     while(appData.nRF_status);  // Wait for SPI driver to be idle
@@ -174,6 +181,13 @@ void nRF24L01p_PowerUp(void)
     SPI_WriteBuffer[1] = 0b00000111;
     DRV_SPI_BufferAddWriteRead2(SPI_handle, SPI_WriteBuffer, 2, SPI_ReadBuffer, 1,
             APP_SPI_BufferEventHandler, NULL, &SPI_bufferHandle);
+    
+    // DYNPD: Enable dynamic payloads on P0 and P1
+    while(appData.nRF_status);  // Wait for SPI driver to be idle
+    SPI_WriteBuffer[0] = W_REGISTER | DYNPD;
+    SPI_WriteBuffer[1] = 0x03;
+    DRV_SPI_BufferAddWriteRead2(SPI_handle, SPI_WriteBuffer, 2, SPI_ReadBuffer, 1,
+            APP_SPI_BufferEventHandler, NULL, &SPI_bufferHandle);     
     
     // CONFIG: Power up
     while(appData.nRF_status);  // Wait for SPI driver to be idle
@@ -228,19 +242,14 @@ void APP_Initialize ( void )
 {
     /* Place the App state machine in its initial state. */
     appData.state = APP_STATE_INIT;
-
+    spi_status = 0;
     
     /* TODO: Initialize your application's state machine and other
      * parameters.
      */
-    
-    SPI_handle = DRV_SPI_Open( DRV_SPI_INDEX_0, DRV_IO_INTENT_READWRITE );	// Open driver instance
-    DRV_SPI_ClientConfigure(SPI_handle,  &SPI_cfgObj);	// Register callback functions
-    vTaskDelay(300 / portTICK_PERIOD_MS);  // Wait for the nRF24L01+ to initiate
-    
-    // Config nRF24L01+ registers to operate in the application
-    nRF24L01p_PowerUp();
-    nRF24L01p_PRX_config();     // Set PRX mode
+    // Reset nRF24L01+ lines
+    PLIB_PORTS_PinWrite(PORTS_ID_0, PORT_CHANNEL_G, CSN_PIN, 1); // CSN idle
+    PLIB_PORTS_PinWrite(PORTS_ID_0, PORT_CHANNEL_G, CE_PIN, 0); // No transmiting
     
 }
 
@@ -264,11 +273,35 @@ void APP_Tasks ( void )
         case APP_STATE_INIT:
         {
             bool appInitialized = true;
-       
-        
+            SPI_handle = DRV_SPI_Open( DRV_SPI_INDEX_0, DRV_IO_INTENT_READWRITE);// | DRV_IO_INTENT_NONBLOCKING);	// Open driver instance
+            DRV_SPI_ClientConfigure(SPI_handle,  &SPI_cfgObj);	// Register callback functions
+            
+            Nop();
+            vTaskDelay(400 / portTICK_PERIOD_MS);  // Wait for the nRF24L01+ to initiate
+            
+            // Read the reset value of the config register to check protocol         
+            while(appData.nRF_status);
+            // Assert CSN line (0)
+            //PLIB_PORTS_PinWrite(PORTS_ID_0, PORT_CHANNEL_G, CSN_PIN, 0);
+            SPI_WriteBuffer[0] = R_REGISTER | CONFIG;   // Read the STATUS register
+            DRV_SPI_BufferAddWriteRead2(SPI_handle, SPI_WriteBuffer, 1, SPI_ReadBuffer, 2,
+                    APP_SPI_BufferEventHandler, NULL, &SPI_bufferHandle);
+                
+            
+            Nop();
+            while(appData.nRF_status);
+            Nop();
+            if(SPI_ReadBuffer[1] == 0x08){
+            //if(SPI_ReadBuffer[0] == R_REGISTER){
+                PLIB_PORTS_PinWrite(PORTS_ID_0, PORT_CHANNEL_D, PORTS_BIT_POS_2, 1);
+                //PLIB_PORTS_PinToggle(PORTS_ID_0, PORT_CHANNEL_D, PORTS_BIT_POS_2);
+            }
+                
+            // Config nRF24L01+ registers to operate in the application
+            nRF24L01p_PowerUp();
+            nRF24L01p_PRX_config();     // Set PRX mode
             if (appInitialized)
             {
-            
                 appData.state = APP_STATE_SERVICE_TASKS;
             }
             break;
@@ -280,6 +313,9 @@ void APP_Tasks ( void )
             // Wait for INT2 external interrupt, nRF24L01+ interrupt request.
             ulTaskNotifyTake( pdTRUE, portMAX_DELAY ); /* Block indefinitely. */
 
+            // Signal interrupt request
+            //PLIB_PORTS_PinToggle(PORTS_ID_0, PORT_CHANNEL_D, PORTS_BIT_POS_2);
+            
             while(appData.nRF_status);  // Wait for SPI driver to be idle
             SPI_WriteBuffer[0] = NRF_NOP_CMD;   // Read the STATUS register
             DRV_SPI_BufferAddWriteRead2(SPI_handle, SPI_WriteBuffer, 1, SPI_ReadBuffer, 1,
@@ -372,8 +408,15 @@ void APP_Tasks ( void )
                     DRV_SPI_BufferAddWriteRead2(SPI_handle, SPI_WriteBuffer, n_payload+2, SPI_ReadBuffer, 1,
                             APP_SPI_BufferEventHandler, NULL, &SPI_bufferHandle);                    
                     appData.cmd = 0; // Can be replaced with an enum type
+                    appData.state = APP_STATE_SERVICE_TASKS; // Wait for another RF command
                     break;
                 }
+                default:
+                {
+                    appData.cmd = 0; // Can be replaced with an enum type
+                    appData.state = APP_STATE_SERVICE_TASKS; // Wait for another RF command
+                    break;
+                }    
             }
 
         /* The default state should never be executed. */
@@ -383,6 +426,7 @@ void APP_Tasks ( void )
         default:
         {
             /* TODO: Handle error in application's state machine. */
+
             break;
         }
     }

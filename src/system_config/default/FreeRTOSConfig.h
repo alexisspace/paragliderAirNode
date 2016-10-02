@@ -127,7 +127,7 @@
 #define configTIMER_TASK_STACK_DEPTH            
 
 /* Misc */
-#define configUSE_APPLICATION_TASK_TAG          0
+#define configUSE_APPLICATION_TASK_TAG          1
 
 
 /* Interrupt nesting behaviour configuration. */

@@ -73,9 +73,11 @@ int main ( void )
     /* Initialize all MPLAB Harmony modules, including application(s). */
     SYS_Initialize ( NULL );
 
-
+ 
     while ( true )
     {
+        
+        //BSP_LEDOn(1);
         /* Maintain state machines of all polled MPLAB Harmony modules. */
         SYS_Tasks ( );
 

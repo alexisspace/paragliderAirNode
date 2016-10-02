@@ -58,7 +58,6 @@ SUBSTITUTE GOODS, TECHNOLOGY, SERVICES, OR ANY CLAIMS BY THIRD PARTIES
 #include "insgps.h"
 
 
-
 // *****************************************************************************
 // *****************************************************************************
 // Section: Local Prototypes
@@ -92,7 +91,7 @@ void SYS_Tasks ( void )
 {
     BaseType_t xReturned;
     
-
+    //BSP_LEDToggle(YELLOW);
     /* Create OS Thread for Sys Tasks. */
     xTaskCreate((TaskFunction_t) _SYS_Tasks,
                 "Sys Tasks",
@@ -101,24 +100,25 @@ void SYS_Tasks ( void )
     /* Create OS Thread for APP Tasks. */
     xTaskCreate((TaskFunction_t) _APP_Tasks,
                 "APP Tasks",
-                240, NULL, 1, &px_APP_TasksHandle);
+                480, NULL, 1, &px_APP_TasksHandle);
     
     xReturned = xTaskCreate((TaskFunction_t) vTaskMyDelay,
                 "Delay",
                 128, NULL, 1, NULL);
     
+    
     // Navigation prediction task
     xReturned = xTaskCreate((TaskFunction_t) vTaskNavPrediction,
-                "Delay",
+                "Predic",
                 580, NULL, 1, &pxTaskNavPredictionHandle);
 
     // Navigation correction task
     xReturned = xTaskCreate((TaskFunction_t) vTaskNavCorrection,
-                "Delay",
+                "Correc",
                 240, NULL, 1, &pxTaskNavCorrectionHandle);
 
     
-    
+    //PLIB_PORTS_PinToggle(PORTS_ID_0, PORT_CHANNEL_D, PORTS_BIT_POS_2);
     /**************
      * Start RTOS * 
      **************/
@@ -160,11 +160,10 @@ static void _SYS_Tasks ( void)
 
 static void _APP_Tasks(void)
 {
-    
     while(1)
     {
         APP_Tasks();
-        vTaskDelay(1000 / portTICK_PERIOD_MS);
+        //vTaskDelay(500 / portTICK_PERIOD_MS);
     }
 }
 
@@ -177,8 +176,10 @@ static void vTaskMyDelay(void* pvParameters)
     {
         vTaskDelayUntil(&xLastWakeTime, (333 / portTICK_PERIOD_MS));       
         // Toggle LED1
-        BSP_LEDToggle(RED);
-
+        Nop();
+        //PLIB_PORTS_PinToggle(PORTS_ID_0, PORT_CHANNEL_D, PORTS_BIT_POS_1);
+        //PLIB_PORTS_PinToggle(PORTS_ID_0, PORT_CHANNEL_G, CSN_PIN);
+        //PLIB_PORTS_PinToggle(PORTS_ID_0, PORT_CHANNEL_G, CE_PIN);
 
         //taskYIELD();
     }
@@ -277,7 +278,7 @@ static void vTaskNavCorrection(void * pvParameters)
             }
         }while(!msgReceived);
 
-        BSP_LEDToggle(YELLOW);
+        //BSP_LEDToggle(GREEN);
         
         // Extract Lat, Lon, vel north, vel east from GPS RMC message
         c_ptr1 = strtok(msg_gps, ","); // Tokenize GPS message

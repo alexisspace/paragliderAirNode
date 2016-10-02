@@ -73,7 +73,10 @@ void IntHandlerExternalInterruptInstance0(void)
 {
     BaseType_t xHigherPriorityTaskWoken;
     
+    // IMU IRQ:Unblock navigation prediction task
     PLIB_INT_SourceFlagClear(INT_ID_0, INT_SOURCE_EXTERNAL_1);
+    
+    
     
     /* xHigherPriorityTaskWoken must be initialised to pdFALSE.  If calling
     vTaskNotifyGiveFromISR() unblocks the handling task, and the priority of
@@ -92,12 +95,13 @@ void IntHandlerExternalInterruptInstance0(void)
 }
 void IntHandlerExternalInterruptInstance1(void)
 {
-    // nRF24L01+ interrupt request
+    // nRF24L01+ interrupt request. Unblock _APP tasks
     BaseType_t xHigherPriorityTaskWoken;
     
     PLIB_INT_SourceFlagClear(INT_ID_0, INT_SOURCE_EXTERNAL_2);
     
     
+    PLIB_PORTS_PinToggle(PORTS_ID_0, PORT_CHANNEL_D, PORTS_BIT_POS_1);
     
     /* xHigherPriorityTaskWoken must be initialised to pdFALSE.  If calling
     vTaskNotifyGiveFromISR() unblocks the handling task, and the priority of
@@ -110,7 +114,7 @@ void IntHandlerExternalInterruptInstance1(void)
     when the task was created. */
     vTaskNotifyGiveFromISR( px_APP_TasksHandle, &xHigherPriorityTaskWoken );
     
-    portEND_SWITCHING_ISR(xHigherPriorityTaskWoken);     
+    portEND_SWITCHING_ISR(xHigherPriorityTaskWoken);
 }
 void IntHandlerDrvUsartInstance0(void)
 {
@@ -119,12 +123,24 @@ void IntHandlerDrvUsartInstance0(void)
     DRV_USART_TasksError(sysObj.drvUsart0);
 }
  
+ 
+ 
+
+ 
+
+ 
+
+ 
+
+ 
+
+ 
+ 
 void IntHandlerSPIInstance0(void)
 {
     DRV_SPI_Tasks(sysObj.spiObjectIdx0);
 }
  
-  
 /*******************************************************************************
  End of File
 */

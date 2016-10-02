@@ -123,6 +123,9 @@ TaskHandle_t pxTaskNavPredictionHandle, pxTaskNavCorrectionHandle;
 TaskHandle_t px_APP_TasksHandle; 
 float mag_data[3], Pos[3], Vel[3], BaroAlt;
 
+// Exposed fuctions prototypes
+
+
 // DOM-IGNORE-BEGIN
 #ifdef __cplusplus  // Provide C++ Compatibility
 
@@ -186,7 +189,7 @@ typedef struct
 
 } APP_DATA;
 
-
+volatile APP_DATA appData;
 // *****************************************************************************
 // *****************************************************************************
 // Section: Application Callback Routines

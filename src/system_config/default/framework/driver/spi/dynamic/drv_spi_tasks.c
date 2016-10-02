@@ -48,7 +48,7 @@ SUBSTITUTE GOODS, TECHNOLOGY, SERVICES, OR ANY CLAIMS BY THIRD PARTIES
 
 
 
-int32_t DRV_SPI_ISRMasterEBM8BitTasks ( struct DRV_SPI_DRIVER_OBJECT * pDrvInstance )    
+int32_t DRV_SPI_ISRMasterRM8BitTasks ( struct DRV_SPI_DRIVER_OBJECT * pDrvInstance )    
 {
     volatile bool continueLoop;
     
@@ -92,11 +92,6 @@ int32_t DRV_SPI_ISRMasterEBM8BitTasks ( struct DRV_SPI_DRIVER_OBJECT * pDrvInsta
             
             /* List the new job as processing*/
             currentJob->status = DRV_SPI_BUFFER_EVENT_PROCESSING;
-            if (currentJob->dataLeftToTx +currentJob->dummyLeftToTx > PLIB_SPI_RX_8BIT_FIFO_SIZE(spiId))
-            {
-                PLIB_SPI_FIFOInterruptModeSelect(spiId, SPI_FIFO_INTERRUPT_WHEN_TRANSMIT_BUFFER_IS_1HALF_EMPTY_OR_MORE);
-                PLIB_SPI_FIFOInterruptModeSelect(spiId, SPI_FIFO_INTERRUPT_WHEN_RECEIVE_BUFFER_IS_1HALF_FULL_OR_MORE);
-            }
             /* Flush out the Receive buffer */
             PLIB_SPI_BufferClear(spiId);
         }
@@ -107,7 +102,7 @@ int32_t DRV_SPI_ISRMasterEBM8BitTasks ( struct DRV_SPI_DRIVER_OBJECT * pDrvInsta
              if 
             (currentJob->dataLeftToTx +currentJob->dummyLeftToTx != 0)
         {
-            DRV_SPI_MasterEBMSend8BitISR(pDrvInstance);
+            DRV_SPI_MasterRMSend8BitISR(pDrvInstance);
         }
         
         DRV_SPI_ISRErrorTasks(pDrvInstance);
@@ -118,7 +113,7 @@ int32_t DRV_SPI_ISRMasterEBM8BitTasks ( struct DRV_SPI_DRIVER_OBJECT * pDrvInsta
 
         if (bytesLeft != 0)
         {
-            DRV_SPI_MasterEBMReceive8BitISR(pDrvInstance);
+            DRV_SPI_MasterRMReceive8BitISR(pDrvInstance);
             bytesLeft = currentJob->dataLeftToRx + currentJob->dummyLeftToRx;
         }
      
